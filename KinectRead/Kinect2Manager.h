@@ -43,6 +43,8 @@ public:
 	RGBQUAD * GetDepthRGBX();
 	USHORT * GetDepth();
 	RGBQUAD * GetColorRGBX();
+	INT64 GetDepthTime();
+	INT64 GetColorTime();
 	USHORT * GetDepthMappedToColor();
 	int * GetDepthXMappedToColor();
 	int * GetDepthYMappedToColor();
@@ -110,6 +112,8 @@ private:
 	IMultiSourceFrameReader * m_pMultiSourceFrameReader;
 
 	INT64 m_nStartTime;
+	INT64 m_nDepthTime;
+	INT64 m_nColorTime;
 
 	RGBQUAD * m_pDepthRGBX;
 	USHORT * m_pDepth;

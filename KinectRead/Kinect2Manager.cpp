@@ -344,6 +344,8 @@ void Kinect2Manager::UpdateDepth(IDepthFrame* pDepthFrame){
 
 	if (SUCCEEDED(hr))
 	{
+
+		m_nDepthTime = nTime;
 		hr = pDepthFrame->get_FrameDescription(&pFrameDescription);
 	}
 
@@ -529,6 +531,8 @@ void Kinect2Manager::UpdateColor(IColorFrame* pColorFrame)
 
 	if (SUCCEEDED(hr))
 	{
+
+		m_nColorTime = nTime;
 		hr = pColorFrame->get_FrameDescription(&pFrameDescription);
 	}
 
@@ -833,6 +837,14 @@ USHORT * Kinect2Manager::GetDepth(){
 
 RGBQUAD * Kinect2Manager::GetColorRGBX(){
 	return m_pColorRGBX;
+}
+
+INT64 Kinect2Manager::GetDepthTime(){
+	return m_nDepthTime;
+}
+
+INT64 Kinect2Manager::GetColorTime(){
+	return m_nColorTime;
 }
 
 USHORT * Kinect2Manager::GetDepthMappedToColor(){
