@@ -1,0 +1,37 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.21005.1
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "KinectRead", "KinectRead\KinectRead.vcxproj", "{C7A671E2-2245-405B-8EBD-E7442B8B70BD}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DumpKinect", "DumpKinect\DumpKinect.vcxproj", "{285A129D-8F8F-45DF-9E54-7D3110E71DEF}"
+	ProjectSection(ProjectDependencies) = postProject
+		{C7A671E2-2245-405B-8EBD-E7442B8B70BD} = {C7A671E2-2245-405B-8EBD-E7442B8B70BD}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "KinectCalibrate", "KinectCalibrate\KinectCalibrate.vcxproj", "{C2A6DBF2-66E1-422A-AE78-7D628DDE2957}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C7A671E2-2245-405B-8EBD-E7442B8B70BD}.Debug|Win32.ActiveCfg = Debug|Win32
+		{C7A671E2-2245-405B-8EBD-E7442B8B70BD}.Debug|Win32.Build.0 = Debug|Win32
+		{C7A671E2-2245-405B-8EBD-E7442B8B70BD}.Release|Win32.ActiveCfg = Release|Win32
+		{C7A671E2-2245-405B-8EBD-E7442B8B70BD}.Release|Win32.Build.0 = Release|Win32
+		{285A129D-8F8F-45DF-9E54-7D3110E71DEF}.Debug|Win32.ActiveCfg = Debug|Win32
+		{285A129D-8F8F-45DF-9E54-7D3110E71DEF}.Debug|Win32.Build.0 = Debug|Win32
+		{285A129D-8F8F-45DF-9E54-7D3110E71DEF}.Release|Win32.ActiveCfg = Release|Win32
+		{285A129D-8F8F-45DF-9E54-7D3110E71DEF}.Release|Win32.Build.0 = Release|Win32
+		{C2A6DBF2-66E1-422A-AE78-7D628DDE2957}.Debug|Win32.ActiveCfg = Debug|Win32
+		{C2A6DBF2-66E1-422A-AE78-7D628DDE2957}.Debug|Win32.Build.0 = Debug|Win32
+		{C2A6DBF2-66E1-422A-AE78-7D628DDE2957}.Release|Win32.ActiveCfg = Release|Win32
+		{C2A6DBF2-66E1-422A-AE78-7D628DDE2957}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
