@@ -275,12 +275,7 @@ int main(int argc, char ** argv){
 		JointOrientation* joint_orientations = kinect_manager.GetJointOrientations();
 
 		if (height > 0 && width > 0){
-			cv::Mat rgba_mat(color_height, color_width, CV_8UC4, rgbx);
-			cv::Mat rgba_todepth_mat(height, width, CV_8UC4, rgbx_todepth);
-			cv::Mat body_rgba_mat(height, width, CV_8UC4, body_rgbx_todepth);
 			cv::Mat depth_rgba(height, width, CV_8UC4, depth_rgbx);
-			cv::imshow("img", rgba_mat);
-			cv::imshow("body img", body_rgba_mat);
 			cv::imshow("depth img", depth_rgba);
 			cv::Mat depth_mat(height, width, cv::DataType<USHORT>::type, depth);
 
@@ -295,12 +290,31 @@ int main(int argc, char ** argv){
 					break;
 				}
 			}
+
+			KinectFrame frame;
+
+
+			frame.img_depth = depth_mat.clone();
+
+			if (color_height > 0 && color_width > 0){
+
+				cv::Mat rgba_todepth_mat(height, width, CV_8UC4, rgbx_todepth);
+				cv::Mat body_rgba_mat(height, width, CV_8UC4, body_rgbx_todepth);
+				cv::imshow("img", rgba_todepth_mat);
+				cv::imshow("body img", body_rgba_mat);
+
+				cv::Mat rgba_mat(color_height, color_width, CV_8UC4, rgbx);
+				frame.img_rgba = rgba_mat.clone();
+
+				frame.img_rgba_mapped_to_depth = rgba_todepth_mat.clone();
+				frame.img_rgba_body = body_rgba_mat.clone();
+			}
+
 			if (different){
 
 				try{
 					if (b_record){
 
-						KinectFrame frame;
 
 						INT64 depth_time = kinect_manager.GetDepthTime();
 						INT64 color_time = kinect_manager.GetColorTime();
@@ -309,11 +323,6 @@ int main(int argc, char ** argv){
 						frame.depth_time = color_time;
 
 						cv::Mat body_rgba_mat(height, width, CV_8UC4, body_rgbx_todepth);
-
-						cv::Mat new_rgba_mat = rgba_mat.clone();
-						cv::Mat new_rgba_mat_todepth = rgba_todepth_mat.clone();
-						cv::Mat new_body_rgba_mat = body_rgba_mat.clone();
-						cv::Mat new_depth_mat = depth_mat.clone();
 
 						frame.joints = (std::vector<Joint>(num_joints));
 						frame.joint_orientations = (std::vector<JointOrientation>(num_joints));
@@ -326,10 +335,6 @@ int main(int argc, char ** argv){
 						frame.lefthand_confidence = (kinect_manager.getHandLeftConfidence());
 						frame.righthand_confidence = (kinect_manager.getHandRightConfidence());
 
-						frame.img_rgba = (new_rgba_mat);
-						frame.img_rgba_mapped_to_depth = new_rgba_mat_todepth;
-						frame.img_rgba_body = (new_body_rgba_mat);
-						frame.img_depth = (new_depth_mat);
 
 						int * depth_space_X = kinect_manager.GetColorXMappedToDepth();
 						int * depth_space_Y = kinect_manager.GetColorYMappedToDepth();
@@ -362,6 +367,8 @@ int main(int argc, char ** argv){
 
 						frame.map_color_to_depth = (depthspace_pts);
 						std::cout << "Frame " << frames.size() + offset << " recorded\n";
+
+						frames.push_back(frame);
 					}
 
 					depth_prev = depth_mat.clone();

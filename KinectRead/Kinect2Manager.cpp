@@ -212,6 +212,11 @@ void Kinect2Manager::Update(unsigned int options){
 	IBodyIndexFrame * pBodyIndexFrame = NULL;
 	IMultiSourceFrame * pMultiSourceFrame = NULL;
 
+	m_nColorWidth = 0;
+	m_nColorHeight = 0;
+	m_nDepthWidth = 0;
+	m_nDepthHeight = 0;
+
 	m_bCalculateDepthRGBX = options & Update::DepthRGBX;
 
 	HRESULT hr = m_pMultiSourceFrameReader->AcquireLatestFrame(&pMultiSourceFrame);
