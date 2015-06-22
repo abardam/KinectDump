@@ -37,16 +37,16 @@ void save(std::string dir, std::vector<KinectFrame>& frames,
 			cv::imwrite(filename_ss.str(), frames[i].img_rgba_body);
 		}
 
-		if (!frames[i].img_rgba.empty()){
+		if (!frames[i].img_rgba_mapped_to_depth.empty()){
 			filename_ss.str("");
 			filename_ss << dir << "/rgba_depthmapped" << offset + i << ".png";
-			cv::imwrite(filename_ss.str(), frames[i].img_rgba);
+			cv::imwrite(filename_ss.str(), frames[i].img_rgba_mapped_to_depth);
 		}
 
-		if (!frames[i].img_rgba_body.empty()){
+		if (!frames[i].img_rgba_mapped_to_depth_body.empty()){
 			filename_ss.str("");
 			filename_ss << dir << "/rgba_depthmapped_body" << offset + i << ".png";
-			cv::imwrite(filename_ss.str(), frames[i].img_rgba_body);
+			cv::imwrite(filename_ss.str(), frames[i].img_rgba_mapped_to_depth_body);
 		}
 
 		if (!frames[i].img_depth.empty()){
@@ -106,7 +106,10 @@ void save(std::string dir, std::vector<KinectFrame>& frames,
 			fs.release();
 		}
 
+		std::cout << "Frame " << offset + i << " saved.\n";
 	}
+
+
 
 	offset += frames.size();
 	frames.clear();
@@ -291,23 +294,14 @@ int main(int argc, char ** argv){
 				}
 			}
 
-			KinectFrame frame;
-
-
-			frame.img_depth = depth_mat.clone();
+			cv::Mat rgba_todepth_mat(height, width, CV_8UC4, rgbx_todepth);
+			cv::Mat body_rgba_mat(height, width, CV_8UC4, body_rgbx_todepth);
 
 			if (color_height > 0 && color_width > 0){
 
-				cv::Mat rgba_todepth_mat(height, width, CV_8UC4, rgbx_todepth);
-				cv::Mat body_rgba_mat(height, width, CV_8UC4, body_rgbx_todepth);
 				cv::imshow("img", rgba_todepth_mat);
 				cv::imshow("body img", body_rgba_mat);
 
-				cv::Mat rgba_mat(color_height, color_width, CV_8UC4, rgbx);
-				frame.img_rgba = rgba_mat.clone();
-
-				frame.img_rgba_mapped_to_depth = rgba_todepth_mat.clone();
-				frame.img_rgba_body = body_rgba_mat.clone();
 			}
 
 			if (different){
@@ -315,6 +309,16 @@ int main(int argc, char ** argv){
 				try{
 					if (b_record){
 
+						KinectFrame frame;
+						frame.img_depth = depth_mat.clone();
+
+						if (color_height > 0 && color_width > 0){
+							cv::Mat rgba_mat(color_height, color_width, CV_8UC4, rgbx);
+							frame.img_rgba = rgba_mat.clone();
+
+							frame.img_rgba_mapped_to_depth = rgba_todepth_mat.clone();
+							frame.img_rgba_body = body_rgba_mat.clone();
+						}
 
 						INT64 depth_time = kinect_manager.GetDepthTime();
 						INT64 color_time = kinect_manager.GetColorTime();
@@ -355,17 +359,17 @@ int main(int argc, char ** argv){
 						//num++;
 						//exit(1);
 
-						cv::Mat depthspace_pts(height, width, cv::DataType<cv::Vec2s>::type, cv::Scalar(-1, -1));
-
-						for (int y = 0; y < height; ++y){
-							for (int x = 0; x < width; ++x){
-								depthspace_pts.ptr<cv::Vec2s>(y)[x] = cv::Vec2s(*depth_space_X, *depth_space_Y);
-								++depth_space_X;
-								++depth_space_Y;
-							}
-						}
-
-						frame.map_color_to_depth = (depthspace_pts);
+						//cv::Mat depthspace_pts(height, width, cv::DataType<cv::Vec2s>::type, cv::Scalar(-1, -1));
+						//
+						//for (int y = 0; y < height; ++y){
+						//	for (int x = 0; x < width; ++x){
+						//		depthspace_pts.ptr<cv::Vec2s>(y)[x] = cv::Vec2s(*depth_space_X, *depth_space_Y);
+						//		++depth_space_X;
+						//		++depth_space_Y;
+						//	}
+						//}
+						//
+						//frame.map_color_to_depth = (depthspace_pts);
 						std::cout << "Frame " << frames.size() + offset << " recorded\n";
 
 						frames.push_back(frame);
