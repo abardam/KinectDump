@@ -1,7 +1,116 @@
 #include "Kinect2Manager.h"
 #include <opencv2\opencv.hpp>
 
-#define EXTRACT_FULL_COLOR 0
+struct KinectFrame{
+	cv::Mat img_rgba;
+	cv::Mat img_rgba_mapped_to_depth;
+	cv::Mat img_depth;
+	cv::Mat img_rgba_body;
+	cv::Mat img_rgba_mapped_to_depth_body;
+	std::vector<Joint> joints;
+	std::vector<JointOrientation> joint_orientations;
+	cv::Mat map_color_to_depth;
+	cv::Mat map_depth_to_color;
+	int lefthand_confidence, righthand_confidence;
+	INT64 depth_time;
+	INT64 color_time;
+};
+
+
+void save(std::string dir, std::vector<KinectFrame>& frames,
+	int& offset){
+
+	std::stringstream filename_ss;
+	cv::FileStorage fs;
+
+	for (int i = 0; i < frames.size(); ++i){
+
+		if (!frames[i].img_rgba.empty()){
+			filename_ss.str("");
+			filename_ss << dir << "/rgba" << offset + i << ".png";
+			cv::imwrite(filename_ss.str(), frames[i].img_rgba);
+		}
+
+		if (!frames[i].img_rgba_body.empty()){
+			filename_ss.str("");
+			filename_ss << dir << "/rgba_body" << offset + i << ".png";
+			cv::imwrite(filename_ss.str(), frames[i].img_rgba_body);
+		}
+
+		if (!frames[i].img_rgba.empty()){
+			filename_ss.str("");
+			filename_ss << dir << "/rgba_depthmapped" << offset + i << ".png";
+			cv::imwrite(filename_ss.str(), frames[i].img_rgba);
+		}
+
+		if (!frames[i].img_rgba_body.empty()){
+			filename_ss.str("");
+			filename_ss << dir << "/rgba_depthmapped_body" << offset + i << ".png";
+			cv::imwrite(filename_ss.str(), frames[i].img_rgba_body);
+		}
+
+		if (!frames[i].img_depth.empty()){
+			filename_ss.str("");
+			filename_ss << dir << "depth" << offset + i << ".yml";
+			fs.open(filename_ss.str(), cv::FileStorage::WRITE);
+			fs << "depth" << frames[i].img_depth;
+			fs.release();
+		}
+
+
+		if (!frames[i].joints.empty()){
+			filename_ss.str("");
+			filename_ss << dir << "joints" << offset + i << ".yml";
+			fs.open(filename_ss.str(), cv::FileStorage::WRITE);
+
+			fs << "frame" << i
+				<< "lefthand" << frames[i].lefthand_confidence
+				<< "righthand" << frames[i].righthand_confidence
+				<< "depth_time" << (int)(frames[i].depth_time)
+				<< "color_time" << (int)(frames[i].color_time)
+				<< "joints" << "[";
+
+			for (int j = 0; j < frames[i].joints.size(); ++j){
+				cv::Vec4f pos(frames[i].joints[j].Position.X,
+					frames[i].joints[j].Position.Y,
+					frames[i].joints[j].Position.Z,
+					1);
+				cv::Vec4f orientation(	frames[i].joint_orientations[j].Orientation.x,
+										frames[i].joint_orientations[j].Orientation.y,
+										frames[i].joint_orientations[j].Orientation.z,
+										frames[i].joint_orientations[j].Orientation.w);
+				fs << "{" << "joint_type" << (int)frames[i].joints[j].JointType
+					<< "position" << pos
+					<< "tracking_state" << (int)frames[i].joints[j].TrackingState
+					<< "orientation" << orientation
+					<< "}";
+			}
+
+			fs << "]";
+			fs.release();
+		}
+
+		if (!frames[i].map_color_to_depth.empty()){
+			filename_ss.str("");
+			filename_ss << dir << "map_color_to_depth" << offset + i << ".yml";
+			fs.open(filename_ss.str(), cv::FileStorage::WRITE);
+			fs << "map_color_to_depth" << frames[i].map_color_to_depth;
+			fs.release();
+		}
+
+		if (!frames[i].map_depth_to_color.empty()){
+			filename_ss.str("");
+			filename_ss << dir << "map_depth_to_color" << offset + i << ".yml";
+			fs.open(filename_ss.str(), cv::FileStorage::WRITE);
+			fs << "map_depth_to_color" << frames[i].map_depth_to_color;
+			fs.release();
+		}
+
+	}
+
+	offset += frames.size();
+	frames.clear();
+}
 
 void save(std::string dir, std::vector<cv::Mat>& rgba_mats,
 	std::vector<cv::Mat>& body_rgba_mats,
@@ -127,28 +236,9 @@ int main(int argc, char ** argv){
 	cv::FileStorage fs;
 	std::stringstream filename_ss;
 	int counter = 0;
-	
-	int offset_rgba = startframe;
-	int offset_body_rgba = startframe;
-	int offset_depth = startframe;
-	int offset_joint = startframe;
-	int offset_joint_orientation = startframe;
-	int offset_depthspace = startframe;
-	int offset_lefthand = startframe;
-	int offset_righthand = startframe;
 
-	std::vector<cv::Mat> rgba_mats;
-	std::vector<cv::Mat> body_rgba_mats;
-	std::vector<cv::Mat> depth_mats;
-
-	std::vector<cv::Mat> depthspace_pts_mats;
-
-	std::vector<std::vector<Joint>> joints_frames;
-	std::vector<std::vector<JointOrientation>> joint_orientations_frames;
-	std::vector<int> lefthand_confidence_frames;
-	std::vector<int> righthand_confidence_frames;
-	std::vector<INT64> depth_times;
-	std::vector<INT64> color_times;
+	std::vector<KinectFrame> frames;
+	int offset = 0;
 
 	bool b_record = false;
 
@@ -161,17 +251,14 @@ int main(int argc, char ** argv){
 		
 		int width = kinect_manager.getDepthWidth();
 		int height = kinect_manager.getDepthHeight();
-#if EXTRACT_FULL_COLOR
+
 		int color_width = kinect_manager.getColorWidth();
 		int color_height = kinect_manager.getColorHeight();
 		RGBQUAD* rgbx = kinect_manager.GetColorRGBX();
-#else
-		int color_width = width;
-		int color_height = height;
-		RGBQUAD* rgbx = kinect_manager.GetColorMappedToDepth();
-#endif
+		RGBQUAD* rgbx_todepth = kinect_manager.GetColorMappedToDepth();
+
 		USHORT* depth = kinect_manager.GetDepth();
-		RGBQUAD* body_rgbx = kinect_manager.GetBodyDepthRGBX();
+		RGBQUAD* body_rgbx_todepth = kinect_manager.GetBodyDepthRGBX();
 		RGBQUAD * depth_rgbx = kinect_manager.GetDepthRGBX();
 
 		//kinect_manager.Update(Update::Color | Update::Depth | Update::Body | Update::BodyIndex | Update::MapDepthToColor);
@@ -189,7 +276,8 @@ int main(int argc, char ** argv){
 
 		if (height > 0 && width > 0){
 			cv::Mat rgba_mat(color_height, color_width, CV_8UC4, rgbx);
-			cv::Mat body_rgba_mat(height, width, CV_8UC4, body_rgbx);
+			cv::Mat rgba_todepth_mat(height, width, CV_8UC4, rgbx_todepth);
+			cv::Mat body_rgba_mat(height, width, CV_8UC4, body_rgbx_todepth);
 			cv::Mat depth_rgba(height, width, CV_8UC4, depth_rgbx);
 			cv::imshow("img", rgba_mat);
 			cv::imshow("body img", body_rgba_mat);
@@ -212,51 +300,55 @@ int main(int argc, char ** argv){
 				try{
 					if (b_record){
 
+						KinectFrame frame;
+
 						INT64 depth_time = kinect_manager.GetDepthTime();
 						INT64 color_time = kinect_manager.GetColorTime();
 
-						depth_times.push_back(depth_time);
-						color_times.push_back(color_time);
+						frame.depth_time = depth_time;
+						frame.depth_time = color_time;
 
-						cv::Mat body_rgba_mat(height, width, CV_8UC4, body_rgbx);
+						cv::Mat body_rgba_mat(height, width, CV_8UC4, body_rgbx_todepth);
 
 						cv::Mat new_rgba_mat = rgba_mat.clone();
+						cv::Mat new_rgba_mat_todepth = rgba_todepth_mat.clone();
 						cv::Mat new_body_rgba_mat = body_rgba_mat.clone();
 						cv::Mat new_depth_mat = depth_mat.clone();
 
-						joints_frames.push_back(std::vector<Joint>(num_joints));
-						joint_orientations_frames.push_back(std::vector<JointOrientation>(num_joints));
+						frame.joints = (std::vector<Joint>(num_joints));
+						frame.joint_orientations = (std::vector<JointOrientation>(num_joints));
 
 						for (int j = 0; j < JointType_Count; ++j){
-							joints_frames.back()[j] = joints[j];
-							joint_orientations_frames.back()[j] = joint_orientations[j];
+							frame.joints[j] = joints[j];
+							frame.joint_orientations[j] = joint_orientations[j];
 						}
 
-						lefthand_confidence_frames.push_back(kinect_manager.getHandLeftConfidence());
-						righthand_confidence_frames.push_back(kinect_manager.getHandRightConfidence());
+						frame.lefthand_confidence = (kinect_manager.getHandLeftConfidence());
+						frame.righthand_confidence = (kinect_manager.getHandRightConfidence());
 
-						rgba_mats.push_back(new_rgba_mat);
-						body_rgba_mats.push_back(new_body_rgba_mat);
-						depth_mats.push_back(new_depth_mat);
+						frame.img_rgba = (new_rgba_mat);
+						frame.img_rgba_mapped_to_depth = new_rgba_mat_todepth;
+						frame.img_rgba_body = (new_body_rgba_mat);
+						frame.img_depth = (new_depth_mat);
 
 						int * depth_space_X = kinect_manager.GetColorXMappedToDepth();
 						int * depth_space_Y = kinect_manager.GetColorYMappedToDepth();
 
-						static int num = 0;
-						char name[256];
-						FILE *fp;
-						sprintf_s(name, "%s\\dtocx%03d.pgm", dir.c_str(), num);
-						fopen_s(&fp, name, "wb");
-						fprintf( fp, "P5\n%d %d\n65536\n", width*2, height);
-						fwrite(depth_space_X, 1, width*height*4, fp);
-						fclose(fp);
-						sprintf_s(name, "%s\\bodyindex%03d.pgm", dir.c_str(), num);
-						fopen_s(&fp, name, "wb");
-						fprintf(fp, "P5\n%d %d\n65536\n", width * 2, height);
-						fwrite(kinect_manager.m_pBodyIndex, 1, width*height * 4, fp);
-						fclose(fp);
-						num++;
-				//		exit(1);
+						//static int num = 0;
+						//char name[256];
+						//FILE *fp;
+						//sprintf_s(name, "%s\\dtocx%03d.pgm", dir.c_str(), num);
+						//fopen_s(&fp, name, "wb");
+						//fprintf( fp, "P5\n%d %d\n65536\n", width*2, height);
+						//fwrite(depth_space_X, 1, width*height*4, fp);
+						//fclose(fp);
+						//sprintf_s(name, "%s\\bodyindex%03d.pgm", dir.c_str(), num);
+						//fopen_s(&fp, name, "wb");
+						//fprintf(fp, "P5\n%d %d\n65536\n", width * 2, height);
+						//fwrite(kinect_manager.m_pBodyIndex, 1, width*height * 4, fp);
+						//fclose(fp);
+						//num++;
+						//exit(1);
 
 						cv::Mat depthspace_pts(height, width, cv::DataType<cv::Vec2s>::type, cv::Scalar(-1, -1));
 
@@ -268,25 +360,15 @@ int main(int argc, char ** argv){
 							}
 						}
 
-						depthspace_pts_mats.push_back(depthspace_pts);
-						std::cout << "Frame " << rgba_mats.size() + offset_rgba << " recorded\n";
+						frame.map_color_to_depth = (depthspace_pts);
+						std::cout << "Frame " << frames.size() + offset << " recorded\n";
 					}
 
 					depth_prev = depth_mat.clone();
 				}
 				catch (std::exception e){
 					std::cout << "Memory full! Saving\n";
-					save(dir, rgba_mats, body_rgba_mats, depth_mats, joints_frames, joint_orientations_frames, depthspace_pts_mats,
-						lefthand_confidence_frames, righthand_confidence_frames, depth_times, color_times, 
-						offset_rgba, offset_body_rgba, offset_depth, offset_joint, offset_joint_orientation, offset_depthspace, offset_lefthand,offset_righthand);
-
-					rgba_mats.clear();
-					body_rgba_mats.clear();
-					depth_mats.clear();
-					joints_frames.clear();
-					joint_orientations_frames.clear();
-					lefthand_confidence_frames.clear();
-					righthand_confidence_frames.clear();
+					save(dir, frames, offset);
 
 					b_record = false;
 				}
@@ -314,9 +396,7 @@ int main(int argc, char ** argv){
 			b_record = !b_record;
 		}
 		else if (q == 'q' || q=='s'){
-			save(dir, rgba_mats, body_rgba_mats, depth_mats, joints_frames, joint_orientations_frames, depthspace_pts_mats,
-				lefthand_confidence_frames, righthand_confidence_frames, depth_times, color_times,
-				offset_rgba, offset_body_rgba, offset_depth, offset_joint, offset_joint_orientation, offset_depthspace, offset_lefthand,offset_righthand);
+			save(dir, frames, offset);
 			b_record = false;
 
 			if (q == 'q')
