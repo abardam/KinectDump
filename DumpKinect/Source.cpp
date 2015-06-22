@@ -1,6 +1,8 @@
 #include "Kinect2Manager.h"
 #include <opencv2\opencv.hpp>
 
+#define EXTRACT_FULL_COLOR 0
+
 void save(std::string dir, std::vector<cv::Mat>& rgba_mats,
 	std::vector<cv::Mat>& body_rgba_mats,
 	std::vector<cv::Mat>& depth_mats,
@@ -9,6 +11,8 @@ void save(std::string dir, std::vector<cv::Mat>& rgba_mats,
 	std::vector<cv::Mat>& depthspace_pts_mats,
 	std::vector<int>& lefthand_confidence_frames,
 	std::vector<int>& righthand_confidence_frames,
+	std::vector<INT64>& depth_times,
+	std::vector<INT64>& color_times,
 	int& offset_rgba,
 	int& offset_body_rgba,
 	int& offset_depth,
@@ -46,6 +50,8 @@ void save(std::string dir, std::vector<cv::Mat>& rgba_mats,
 		fs << "frame" << i
 			<< "lefthand" << lefthand_confidence_frames[i]
 			<< "righthand" << righthand_confidence_frames[i]
+			<< "depth_time" << (int)(depth_times[i])
+			<< "color_time" << (int)(color_times[i])
 			<< "joints" << "[";
 
 		for (int j = 0; j < joint_frames[i].size(); ++j){
@@ -92,16 +98,25 @@ void save(std::string dir, std::vector<cv::Mat>& rgba_mats,
 	depthspace_pts_mats.clear();
 	lefthand_confidence_frames.clear();
 	righthand_confidence_frames.clear();
+	depth_times.clear();
+	color_times.clear();
 }
 
 int main(int argc, char ** argv){
 
 	std::string dir;
-	if (argc == 2){
+	if (argc >= 2){
 		dir = std::string(argv[1]);
 	}
 	else{
 		dir = "vid/";
+	}
+	int startframe = 0;
+	if (argc >= 3){
+		startframe = atoi(argv[2]);
+	}
+	else{
+		startframe = 0;
 	}
 
 	CreateDirectory(dir.c_str(), NULL);
@@ -113,14 +128,14 @@ int main(int argc, char ** argv){
 	std::stringstream filename_ss;
 	int counter = 0;
 	
-	int offset_rgba = 0;
-	int offset_body_rgba = 0;
-	int offset_depth = 0;
-	int offset_joint = 0;
-	int offset_joint_orientation = 0;
-	int offset_depthspace = 0;
-	int offset_lefthand = 0;
-	int offset_righthand = 0;
+	int offset_rgba = startframe;
+	int offset_body_rgba = startframe;
+	int offset_depth = startframe;
+	int offset_joint = startframe;
+	int offset_joint_orientation = startframe;
+	int offset_depthspace = startframe;
+	int offset_lefthand = startframe;
+	int offset_righthand = startframe;
 
 	std::vector<cv::Mat> rgba_mats;
 	std::vector<cv::Mat> body_rgba_mats;
@@ -132,6 +147,8 @@ int main(int argc, char ** argv){
 	std::vector<std::vector<JointOrientation>> joint_orientations_frames;
 	std::vector<int> lefthand_confidence_frames;
 	std::vector<int> righthand_confidence_frames;
+	std::vector<INT64> depth_times;
+	std::vector<INT64> color_times;
 
 	bool b_record = false;
 
@@ -144,7 +161,15 @@ int main(int argc, char ** argv){
 		
 		int width = kinect_manager.getDepthWidth();
 		int height = kinect_manager.getDepthHeight();
+#if EXTRACT_FULL_COLOR
+		int color_width = kinect_manager.getColorWidth();
+		int color_height = kinect_manager.getColorHeight();
+		RGBQUAD* rgbx = kinect_manager.GetColorRGBX();
+#else
+		int color_width = width;
+		int color_height = height;
 		RGBQUAD* rgbx = kinect_manager.GetColorMappedToDepth();
+#endif
 		USHORT* depth = kinect_manager.GetDepth();
 		RGBQUAD* body_rgbx = kinect_manager.GetBodyDepthRGBX();
 		RGBQUAD * depth_rgbx = kinect_manager.GetDepthRGBX();
@@ -163,7 +188,7 @@ int main(int argc, char ** argv){
 		JointOrientation* joint_orientations = kinect_manager.GetJointOrientations();
 
 		if (height > 0 && width > 0){
-			cv::Mat rgba_mat(height, width, CV_8UC4, rgbx);
+			cv::Mat rgba_mat(color_height, color_width, CV_8UC4, rgbx);
 			cv::Mat body_rgba_mat(height, width, CV_8UC4, body_rgbx);
 			cv::Mat depth_rgba(height, width, CV_8UC4, depth_rgbx);
 			cv::imshow("img", rgba_mat);
@@ -186,6 +211,13 @@ int main(int argc, char ** argv){
 
 				try{
 					if (b_record){
+
+						INT64 depth_time = kinect_manager.GetDepthTime();
+						INT64 color_time = kinect_manager.GetColorTime();
+
+						depth_times.push_back(depth_time);
+						color_times.push_back(color_time);
+
 						cv::Mat body_rgba_mat(height, width, CV_8UC4, body_rgbx);
 
 						cv::Mat new_rgba_mat = rgba_mat.clone();
@@ -207,8 +239,24 @@ int main(int argc, char ** argv){
 						body_rgba_mats.push_back(new_body_rgba_mat);
 						depth_mats.push_back(new_depth_mat);
 
-						int * depth_space_X = kinect_manager.GetDepthXMappedToColor();
-						int * depth_space_Y = kinect_manager.GetDepthYMappedToColor();
+						int * depth_space_X = kinect_manager.GetColorXMappedToDepth();
+						int * depth_space_Y = kinect_manager.GetColorYMappedToDepth();
+
+						static int num = 0;
+						char name[256];
+						FILE *fp;
+						sprintf_s(name, "%s\\dtocx%03d.pgm", dir.c_str(), num);
+						fopen_s(&fp, name, "wb");
+						fprintf( fp, "P5\n%d %d\n65536\n", width*2, height);
+						fwrite(depth_space_X, 1, width*height*4, fp);
+						fclose(fp);
+						sprintf_s(name, "%s\\bodyindex%03d.pgm", dir.c_str(), num);
+						fopen_s(&fp, name, "wb");
+						fprintf(fp, "P5\n%d %d\n65536\n", width * 2, height);
+						fwrite(kinect_manager.m_pBodyIndex, 1, width*height * 4, fp);
+						fclose(fp);
+						num++;
+				//		exit(1);
 
 						cv::Mat depthspace_pts(height, width, cv::DataType<cv::Vec2s>::type, cv::Scalar(-1, -1));
 
@@ -229,7 +277,7 @@ int main(int argc, char ** argv){
 				catch (std::exception e){
 					std::cout << "Memory full! Saving\n";
 					save(dir, rgba_mats, body_rgba_mats, depth_mats, joints_frames, joint_orientations_frames, depthspace_pts_mats,
-						lefthand_confidence_frames, righthand_confidence_frames,
+						lefthand_confidence_frames, righthand_confidence_frames, depth_times, color_times, 
 						offset_rgba, offset_body_rgba, offset_depth, offset_joint, offset_joint_orientation, offset_depthspace, offset_lefthand,offset_righthand);
 
 					rgba_mats.clear();
@@ -267,7 +315,7 @@ int main(int argc, char ** argv){
 		}
 		else if (q == 'q' || q=='s'){
 			save(dir, rgba_mats, body_rgba_mats, depth_mats, joints_frames, joint_orientations_frames, depthspace_pts_mats,
-				lefthand_confidence_frames, righthand_confidence_frames,
+				lefthand_confidence_frames, righthand_confidence_frames, depth_times, color_times,
 				offset_rgba, offset_body_rgba, offset_depth, offset_joint, offset_joint_orientation, offset_depthspace, offset_lefthand,offset_righthand);
 			b_record = false;
 

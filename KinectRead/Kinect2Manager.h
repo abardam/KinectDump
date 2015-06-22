@@ -69,6 +69,8 @@ public:
 	//void mapDepthToSkeleton(float * nDepthX, float * nDepthY, long * nDepth,
 	//	float * nCameraX, float * nCameraY, float * nCameraZ);
 
+	int * m_pBodyIndex;
+
 private:
 
 
@@ -138,6 +140,7 @@ private:
 	unsigned int m_nDepthHeight;
 	unsigned int m_nColorWidth;
 	unsigned int m_nColorHeight;
+
 
 	bool m_bCalculateDepthRGBX;
 	bool m_bMapDepthToColor;

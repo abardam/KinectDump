@@ -35,6 +35,7 @@ Kinect2Manager::Kinect2Manager(){
 	m_pColorXMappedToDepth = new int[CAPTURE_SIZE_X_DEPTH * CAPTURE_SIZE_Y_DEPTH];
 	m_pColorYMappedToDepth = new int[CAPTURE_SIZE_X_DEPTH * CAPTURE_SIZE_Y_DEPTH];
 	m_pColorMappedToDepth = new RGBQUAD[CAPTURE_SIZE_X_DEPTH * CAPTURE_SIZE_Y_DEPTH];
+	m_pBodyIndex = new int[CAPTURE_SIZE_X_DEPTH * CAPTURE_SIZE_Y_DEPTH];
 
 	m_pBodyColorRGBX = new RGBQUAD[CAPTURE_SIZE_X_COLOR * CAPTURE_SIZE_Y_COLOR];
 	m_pBodyDepthRGBX = new RGBQUAD[CAPTURE_SIZE_X_DEPTH * CAPTURE_SIZE_Y_DEPTH];
@@ -260,52 +261,63 @@ void Kinect2Manager::Update(unsigned int options){
 			{
 				hr = pBodyFrameReference->AcquireFrame(&pBodyFrame);
 			}
-			if (SUCCEEDED(hr)){
-				UpdateBody(pBodyFrame);
-
-			}
-
 			SafeRelease(pBodyFrameReference);
 		}
-		if (options & Update::BodyIndex){
-			IBodyIndexFrameReference* pBodyIndexFrameReference = NULL;
 
-			hr = pMultiSourceFrame->get_BodyIndexFrameReference(&pBodyIndexFrameReference);
-			if (SUCCEEDED(hr))
-			{
-				hr = pBodyIndexFrameReference->AcquireFrame(&pBodyIndexFrame);
-			}
-			if (SUCCEEDED(hr)){
-				UpdateBodyIndex(pBodyIndexFrame);
-			}
 
-			SafeRelease(pBodyIndexFrameReference);
-		}
 
-		if ((options & Update::Color)){
-			UpdateColor(pColorFrame);
-		}
+		if (options & Update::Color && options & Update::Depth){
 
-		if ((options & Update::Depth)){
-			UpdateDepth(pDepthFrame);
-		}
 
-		if (options & (Update::Color | Update::Depth)){
 
-			if ((options & Update::MapDepthToColor)){
-				CalculateColorDepthMap();
-				if (m_bColorDepthMapCalculated)
-					ProcessDepthToColor(m_pDepth, m_nDepthWidth, m_nDepthHeight, m_pColorDepthMap, m_nColorWidth, m_nColorHeight);
-			}
 
-			if ((options & Update::MapColorToDepth)){
-				CalculateDepthColorMap();
-				if (m_bDepthColorMapCalculated)
-					ProcessColorToDepth(m_pColorRGBX, m_nColorWidth, m_nColorHeight, m_pDepthColorMap, m_nDepthWidth, m_nDepthHeight);
-			
+			if (options & Update::BodyIndex && options & Update::MapColorToDepth){
+				if (m_bDepthColorMapCalculated){
+					IBodyIndexFrameReference* pBodyIndexFrameReference = NULL;
+
+					hr = pMultiSourceFrame->get_BodyIndexFrameReference(&pBodyIndexFrameReference);
+					if (SUCCEEDED(hr))
+					{
+						hr = pBodyIndexFrameReference->AcquireFrame(&pBodyIndexFrame);
+					}
+
+					SafeRelease(pBodyIndexFrameReference);
+				}
 			}
 		}
 	}
+
+	if (pBodyFrame){
+		UpdateBody(pBodyFrame);
+
+	}
+	if (pColorFrame){
+		UpdateColor(pColorFrame);
+	}
+
+	if (pDepthFrame){
+		UpdateDepth(pDepthFrame);
+
+
+		if (options & Update::MapDepthToColor){
+			CalculateColorDepthMap();
+			if (m_bColorDepthMapCalculated)
+				ProcessDepthToColor(m_pDepth, m_nDepthWidth, m_nDepthHeight, m_pColorDepthMap, m_nColorWidth, m_nColorHeight);
+		}
+
+		if (options & Update::MapColorToDepth){
+			CalculateDepthColorMap();
+			if (m_bDepthColorMapCalculated){
+				ProcessColorToDepth(m_pColorRGBX, m_nColorWidth, m_nColorHeight, m_pDepthColorMap, m_nDepthWidth, m_nDepthHeight);
+
+				if (pBodyIndexFrame){
+					UpdateBodyIndex(pBodyIndexFrame);
+				}
+			}
+
+		}
+	}
+
 
 	SafeRelease(pColorFrame); 
 	SafeRelease(pDepthFrame);
@@ -316,16 +328,14 @@ void Kinect2Manager::Update(unsigned int options){
 
 void Kinect2Manager::CalculateColorDepthMap(){
 	HRESULT hr = m_pCoordinateMapper->MapColorFrameToDepthSpace(m_nDepthWidth*m_nDepthHeight, m_pDepth, m_nColorWidth*m_nColorHeight, m_pColorDepthMap);
-	if (SUCCEEDED(hr)){
-		m_bColorDepthMapCalculated = true;
-	}
+	
+	m_bColorDepthMapCalculated = SUCCEEDED(hr);
 }
 
 void Kinect2Manager::CalculateDepthColorMap(){
 	HRESULT hr = m_pCoordinateMapper->MapDepthFrameToColorSpace(m_nDepthWidth*m_nDepthHeight, m_pDepth, m_nDepthWidth*m_nDepthHeight, m_pDepthColorMap);
-	if (SUCCEEDED(hr)){
-		m_bDepthColorMapCalculated = true;
-	}
+
+	m_bDepthColorMapCalculated = SUCCEEDED(hr);
 }
 
 //after calling this, get the depth fram with GetDepth or GetDepthRGBX
@@ -787,13 +797,16 @@ void Kinect2Manager::ProcessBodyFrameIndexDepth(unsigned char * pBodyIndexBuffer
 		for (int i = 0; i < depthSize; ++i){
 			unsigned char bodyIndex = pBodyIndexBuffer[i];
 
+			m_pBodyIndex[i] = bodyIndex;
+
 			ColorSpacePoint depthColorPoint = pDepthColorMap[i];
-			int colorX = depthColorPoint.X, colorY = depthColorPoint.Y;
+			int colorX = depthColorPoint.X + 0.5, colorY = depthColorPoint.Y + 0.5;
 			int colorPointer = colorX + colorY*nColorWidth;
 
-			if (colorX >= 0 && colorX < nColorWidth &&
-				colorY >= 0 && colorY < nColorHeight && 
-				bodyIndex == m_nBodyIndex){
+			if (colorX >= 0 && colorX < nColorWidth 
+				&& colorY >= 0 && colorY < nColorHeight 
+				&& bodyIndex == m_nBodyIndex
+				){
 				m_pBodyDepthRGBX[i] = m_pColorRGBX[colorPointer];
 			}
 			else{
