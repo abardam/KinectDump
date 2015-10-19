@@ -11,8 +11,8 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{C2A6DBF2-66E1-422A-AE78-7D628DDE2957}</ProjectGuid>
-    <RootNamespace>KinectCalibrate</RootNamespace>
+    <ProjectGuid>{5D25AAEC-6EDC-47B4-9EFE-1A46DF9B02AA}</ProjectGuid>
+    <RootNamespace>DumpKinectASAP</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -34,16 +34,14 @@
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\..\PROPERTY PAGES\Kinect2.props" />
-    <Import Project="..\..\PROPERTY PAGES\KinectRead_debug.props" />
-    <Import Project="..\..\PROPERTY PAGES\CvDraw_debug.props" />
     <Import Project="..\..\PROPERTY PAGES\OpenCV_debug.props" />
+    <Import Project="..\..\PROPERTY PAGES\KinectRead_debug.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\..\PROPERTY PAGES\Kinect2.props" />
     <Import Project="..\..\PROPERTY PAGES\OpenCV.props" />
     <Import Project="..\..\PROPERTY PAGES\KinectRead.props" />
-    <Import Project="..\..\PROPERTY PAGES\CvDraw.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup />
@@ -52,6 +50,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -73,7 +72,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="kinectcalibrate.cpp" />
+    <ClCompile Include="Source.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

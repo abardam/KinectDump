@@ -205,6 +205,100 @@ HRESULT Kinect2Manager::InitializeDefaultSensor()
 	return hr;
 }
 
+
+HRESULT Kinect2Manager::InitializeDefaultSensorSeparateReaders()
+{
+	HRESULT hr;
+
+	hr = GetDefaultKinectSensor(&m_pKinectSensor);
+	if (FAILED(hr))
+	{
+		return hr;
+	}
+
+	if (m_pKinectSensor)
+	{
+		// Initialize the Kinect and get coordinate mapper and the body reader
+		IBodyFrameSource* pBodyFrameSource = NULL;
+
+		hr = m_pKinectSensor->Open();
+
+		if (SUCCEEDED(hr))
+		{
+			hr = m_pKinectSensor->get_CoordinateMapper(&m_pCoordinateMapper);
+		}
+
+		if (SUCCEEDED(hr))
+		{
+			hr = m_pKinectSensor->get_BodyFrameSource(&pBodyFrameSource);
+		}
+		
+		if (SUCCEEDED(hr))
+		{
+			hr = pBodyFrameSource->OpenReader(&m_pBodyFrameReader);
+		}
+		
+		SafeRelease(pBodyFrameSource);
+		
+		
+		// get the color reader
+		IColorFrameSource* pColorFrameSource = NULL;
+		
+		if (SUCCEEDED(hr))
+		{
+		
+			hr = m_pKinectSensor->get_ColorFrameSource(&pColorFrameSource);
+		}
+		
+		if (SUCCEEDED(hr))
+		{
+			hr = pColorFrameSource->OpenReader(&m_pColorFrameReader);
+		}
+		
+		SafeRelease(pColorFrameSource);
+		
+		
+		// get the depth reader
+		
+		IDepthFrameSource* pDepthFrameSource = NULL;
+		
+		if (SUCCEEDED(hr))
+		{
+			hr = m_pKinectSensor->get_DepthFrameSource(&pDepthFrameSource);
+		}
+		
+		if (SUCCEEDED(hr))
+		{
+			hr = pDepthFrameSource->OpenReader(&m_pDepthFrameReader);
+		}
+		
+		SafeRelease(pDepthFrameSource);
+		
+		//get the body frame index reader
+		
+		IBodyIndexFrameSource * pBodyIndexFrameSource = NULL;
+		
+		if (SUCCEEDED(hr)){
+			hr = m_pKinectSensor->get_BodyIndexFrameSource(&pBodyIndexFrameSource);
+		}
+		
+		if (SUCCEEDED(hr)){
+			hr = pBodyIndexFrameSource->OpenReader(&m_pBodyIndexFrameReader);
+		}
+		
+		SafeRelease(pBodyIndexFrameSource);
+
+	}
+
+	if (!m_pKinectSensor || FAILED(hr))
+	{
+		std::cout << "no ready Kinect found!";
+		return E_FAIL;
+	}
+
+	return hr;
+}
+
 void Kinect2Manager::Update(unsigned int options){
 	IColorFrame * pColorFrame = NULL;
 	IDepthFrame * pDepthFrame = NULL;
@@ -219,18 +313,31 @@ void Kinect2Manager::Update(unsigned int options){
 
 	m_bCalculateDepthRGBX = options & Update::DepthRGBX;
 
-	HRESULT hr = m_pMultiSourceFrameReader->AcquireLatestFrame(&pMultiSourceFrame);
+	int numUpdate = countUpdate(options);
+
+	HRESULT hr = 1;
+	
+	if (numUpdate > 1){
+		hr = m_pMultiSourceFrameReader->AcquireLatestFrame(&pMultiSourceFrame);
+	}
 
 	if (SUCCEEDED(hr)){
 
 		if (options & Update::Color){
 			IColorFrameReference* pColorFrameReference = NULL;
 
-			hr = pMultiSourceFrame->get_ColorFrameReference(&pColorFrameReference);
-			if (SUCCEEDED(hr))
-			{
-				hr = pColorFrameReference->AcquireFrame(&pColorFrame);
+			if (numUpdate > 1){
+				hr = pMultiSourceFrame->get_ColorFrameReference(&pColorFrameReference);
+
+				if (SUCCEEDED(hr))
+				{
+					hr = pColorFrameReference->AcquireFrame(&pColorFrame);
+				}
 			}
+			else{
+				hr = m_pColorFrameReader->AcquireLatestFrame(&pColorFrame);
+			}
+
 			if (SUCCEEDED(hr)){
 				m_bMapColorToDepth = options & Update::MapColorToDepth;
 			}
@@ -243,11 +350,18 @@ void Kinect2Manager::Update(unsigned int options){
 		if (options & Update::Depth){
 			IDepthFrameReference* pDepthFrameReference = NULL;
 
-			hr = pMultiSourceFrame->get_DepthFrameReference(&pDepthFrameReference);
-			if (SUCCEEDED(hr))
-			{
-				hr = pDepthFrameReference->AcquireFrame(&pDepthFrame);
+			if (numUpdate > 1){
+
+				hr = pMultiSourceFrame->get_DepthFrameReference(&pDepthFrameReference);
+				if (SUCCEEDED(hr))
+				{
+					hr = pDepthFrameReference->AcquireFrame(&pDepthFrame);
+				}
 			}
+			else{
+				hr = m_pDepthFrameReader->AcquireLatestFrame(&pDepthFrame);
+			}
+
 			if (SUCCEEDED(hr)){
 
 				m_bMapDepthToColor = options & Update::MapDepthToColor;
@@ -261,10 +375,16 @@ void Kinect2Manager::Update(unsigned int options){
 		if (options & Update::Body){
 			IBodyFrameReference* pBodyFrameReference = NULL;
 
-			hr = pMultiSourceFrame->get_BodyFrameReference(&pBodyFrameReference);
-			if (SUCCEEDED(hr))
-			{
-				hr = pBodyFrameReference->AcquireFrame(&pBodyFrame);
+			if (numUpdate > 1){
+
+				hr = pMultiSourceFrame->get_BodyFrameReference(&pBodyFrameReference);
+				if (SUCCEEDED(hr))
+				{
+					hr = pBodyFrameReference->AcquireFrame(&pBodyFrame);
+				}
+			}
+			else{
+				hr = m_pBodyFrameReader->AcquireLatestFrame(&pBodyFrame);
 			}
 			SafeRelease(pBodyFrameReference);
 		}
@@ -934,4 +1054,15 @@ int Kinect2Manager::getHandLeftConfidence(){
 
 int Kinect2Manager::getHandRightConfidence(){
 	return m_nHandRightConfidence;
+}
+
+int countUpdate(unsigned int options){
+	int cnt = 0;
+	if (options & Color){
+		++cnt;
+	}
+	if (options & (Depth | Body | BodyIndex | DepthRGBX)){
+		++cnt;
+	}
+	return cnt;
 }

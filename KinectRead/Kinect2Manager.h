@@ -29,6 +29,8 @@ enum Update{
 	MapColorToDepth	= 0x40,
 };
 
+int countUpdate(unsigned int options);
+
 class Kinect2Manager{
 
 public:
@@ -36,6 +38,7 @@ public:
 	~Kinect2Manager();
 
 	HRESULT InitializeDefaultSensor();
+	HRESULT InitializeDefaultSensorSeparateReaders();
 
 
 	void Update(unsigned int options);
@@ -107,10 +110,12 @@ private:
 
 	IKinectSensor * m_pKinectSensor;
 	ICoordinateMapper * m_pCoordinateMapper;
-	//IBodyFrameReader * m_pBodyFrameReader;
-	//IColorFrameReader * m_pColorFrameReader;
-	//IDepthFrameReader * m_pDepthFrameReader;
-	//IBodyIndexFrameReader * m_pBodyIndexFrameReader;
+
+	IBodyFrameReader * m_pBodyFrameReader;
+	IColorFrameReader * m_pColorFrameReader;
+	IDepthFrameReader * m_pDepthFrameReader;
+	IBodyIndexFrameReader * m_pBodyIndexFrameReader;
+
 	IMultiSourceFrameReader * m_pMultiSourceFrameReader;
 
 	INT64 m_nStartTime;
