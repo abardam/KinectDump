@@ -72,7 +72,10 @@ public:
 	//void mapDepthToSkeleton(float * nDepthX, float * nDepthY, long * nDepth,
 	//	float * nCameraX, float * nCameraY, float * nCameraZ);
 
-	int * m_pBodyIndex;
+	unsigned char * m_pBodyIndex;
+
+	void DumpBuffers();
+	void LoadBuffers();
 
 private:
 
@@ -156,4 +159,6 @@ private:
 
 	int m_nHandLeftConfidence;
 	int m_nHandRightConfidence;
+
+	bool m_bBuffersLoaded;
 };

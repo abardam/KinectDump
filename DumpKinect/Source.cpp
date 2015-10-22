@@ -413,5 +413,8 @@ int main(int argc, char ** argv){
 			if (q == 'q')
 				return 0;
 		}
+		else if (q == 'd'){
+			kinect_manager.DumpBuffers();
+		}
 	}
 }

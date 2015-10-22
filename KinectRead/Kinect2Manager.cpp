@@ -2,6 +2,8 @@
 #include <Kinect.h>
 #include <iostream>
 
+//#define _USE_KINECT
+
 void DumpHR(HRESULT hr)
 {
 	//
@@ -22,6 +24,73 @@ void DumpHR(HRESULT hr)
 
 }
 
+void dump_buffer(const char * filename, const void * buffer, size_t size, size_t count){
+	FILE * file;
+
+	if (fopen_s(&file, filename, "wb") == 0){
+		fwrite(buffer, size, count, file);
+	}
+	else{
+		std::cout << "Problem dumping buffer\n";
+	}
+
+	fclose(file);
+}
+
+void load_buffer(const char * filename, void * buffer, size_t size, size_t count){
+	FILE * file;
+
+	if (fopen_s(&file, filename, "r") == 0){
+		fread_s(buffer, size * count, size, count, file);
+	}
+	else{
+		std::cout << "Problem loading buffer\n";
+	}
+
+	fclose(file);
+}
+
+void Kinect2Manager::DumpBuffers(){
+	CreateDirectoryA("dump/", NULL);
+
+	dump_buffer("dump/depth_rgbx.bin", m_pDepthRGBX, sizeof(RGBQUAD), CAPTURE_SIZE_X_DEPTH * CAPTURE_SIZE_Y_DEPTH);
+	dump_buffer("dump/depth.bin", m_pDepth, sizeof(USHORT), CAPTURE_SIZE_X_DEPTH * CAPTURE_SIZE_Y_DEPTH);
+	dump_buffer("dump/color_rgbx.bin", m_pColorRGBX, sizeof(RGBQUAD), CAPTURE_SIZE_X_COLOR * CAPTURE_SIZE_Y_COLOR);
+	dump_buffer("dump/color_depth_map.bin", m_pColorDepthMap, sizeof(DepthSpacePoint), CAPTURE_SIZE_X_COLOR * CAPTURE_SIZE_Y_COLOR);
+	dump_buffer("dump/depth_color_map_rgbx.bin", m_pDepthColorMap, sizeof(ColorSpacePoint), CAPTURE_SIZE_X_DEPTH * CAPTURE_SIZE_Y_DEPTH);
+	dump_buffer("dump/depth_x_mapped_to_color.bin", m_pDepthXMappedToColor, sizeof(int), CAPTURE_SIZE_X_COLOR * CAPTURE_SIZE_Y_COLOR);
+	dump_buffer("dump/depth_y_mapped_to_color.bin", m_pDepthYMappedToColor, sizeof(int), CAPTURE_SIZE_X_COLOR * CAPTURE_SIZE_Y_COLOR);
+	dump_buffer("dump/depth_mapped_to_color.bin", m_pDepthMappedToColor, sizeof(USHORT), CAPTURE_SIZE_X_COLOR * CAPTURE_SIZE_Y_COLOR);
+	dump_buffer("dump/color_x_mapped_to_depth.bin", m_pColorXMappedToDepth, sizeof(int), CAPTURE_SIZE_X_DEPTH * CAPTURE_SIZE_Y_DEPTH);
+	dump_buffer("dump/color_y_mapped_to_depth.bin", m_pColorYMappedToDepth, sizeof(int), CAPTURE_SIZE_X_DEPTH * CAPTURE_SIZE_Y_DEPTH);
+	dump_buffer("dump/color_mapped_to_depth.bin", m_pColorMappedToDepth, sizeof(RGBQUAD), CAPTURE_SIZE_X_DEPTH * CAPTURE_SIZE_Y_DEPTH);
+	dump_buffer("dump/body_index.bin", m_pBodyIndex, sizeof(unsigned char), CAPTURE_SIZE_X_DEPTH * CAPTURE_SIZE_Y_DEPTH);
+	dump_buffer("dump/joints.bin", m_pJoints, sizeof(Joint), JointType_Count);
+	dump_buffer("dump/joint_orientations.bin", m_pJointOrientations, sizeof(JointOrientation), JointType_Count);
+	dump_buffer("dump/best_body_index.bin", &m_nBodyIndex, sizeof(UCHAR), 1);
+
+}
+
+void Kinect2Manager::LoadBuffers(){
+
+	load_buffer("dump/depth_rgbx.bin", m_pDepthRGBX, sizeof(RGBQUAD), CAPTURE_SIZE_X_DEPTH * CAPTURE_SIZE_Y_DEPTH);
+	load_buffer("dump/depth.bin", m_pDepth, sizeof(USHORT), CAPTURE_SIZE_X_DEPTH * CAPTURE_SIZE_Y_DEPTH);
+	load_buffer("dump/color_rgbx.bin", m_pColorRGBX, sizeof(RGBQUAD), CAPTURE_SIZE_X_COLOR * CAPTURE_SIZE_Y_COLOR);
+	load_buffer("dump/color_depth_map.bin", m_pColorDepthMap, sizeof(DepthSpacePoint), CAPTURE_SIZE_X_COLOR * CAPTURE_SIZE_Y_COLOR);
+	load_buffer("dump/depth_color_map_rgbx.bin", m_pDepthColorMap, sizeof(ColorSpacePoint), CAPTURE_SIZE_X_DEPTH * CAPTURE_SIZE_Y_DEPTH);
+	load_buffer("dump/depth_x_mapped_to_color.bin", m_pDepthXMappedToColor, sizeof(int), CAPTURE_SIZE_X_COLOR * CAPTURE_SIZE_Y_COLOR);
+	load_buffer("dump/depth_y_mapped_to_color.bin", m_pDepthYMappedToColor, sizeof(int), CAPTURE_SIZE_X_COLOR * CAPTURE_SIZE_Y_COLOR);
+	load_buffer("dump/depth_mapped_to_color.bin", m_pDepthMappedToColor, sizeof(USHORT), CAPTURE_SIZE_X_COLOR * CAPTURE_SIZE_Y_COLOR);
+	load_buffer("dump/color_x_mapped_to_depth.bin", m_pColorXMappedToDepth, sizeof(int), CAPTURE_SIZE_X_DEPTH * CAPTURE_SIZE_Y_DEPTH);
+	load_buffer("dump/color_y_mapped_to_depth.bin", m_pColorYMappedToDepth, sizeof(int), CAPTURE_SIZE_X_DEPTH * CAPTURE_SIZE_Y_DEPTH);
+	load_buffer("dump/color_mapped_to_depth.bin", m_pColorMappedToDepth, sizeof(RGBQUAD), CAPTURE_SIZE_X_DEPTH * CAPTURE_SIZE_Y_DEPTH);
+	load_buffer("dump/body_index.bin", m_pBodyIndex, sizeof(unsigned char), CAPTURE_SIZE_X_DEPTH * CAPTURE_SIZE_Y_DEPTH);
+	load_buffer("dump/joints.bin", m_pJoints, sizeof(Joint), JointType_Count);
+	load_buffer("dump/joint_orientations.bin", m_pJointOrientations, sizeof(JointOrientation), JointType_Count);
+	load_buffer("dump/best_body_index.bin", &m_nBodyIndex, sizeof(UCHAR), 1);
+
+}
+
 Kinect2Manager::Kinect2Manager(){
 
 	m_pDepthRGBX = new RGBQUAD[CAPTURE_SIZE_X_DEPTH * CAPTURE_SIZE_Y_DEPTH];
@@ -35,7 +104,7 @@ Kinect2Manager::Kinect2Manager(){
 	m_pColorXMappedToDepth = new int[CAPTURE_SIZE_X_DEPTH * CAPTURE_SIZE_Y_DEPTH];
 	m_pColorYMappedToDepth = new int[CAPTURE_SIZE_X_DEPTH * CAPTURE_SIZE_Y_DEPTH];
 	m_pColorMappedToDepth = new RGBQUAD[CAPTURE_SIZE_X_DEPTH * CAPTURE_SIZE_Y_DEPTH];
-	m_pBodyIndex = new int[CAPTURE_SIZE_X_DEPTH * CAPTURE_SIZE_Y_DEPTH];
+	m_pBodyIndex = new unsigned char[CAPTURE_SIZE_X_DEPTH * CAPTURE_SIZE_Y_DEPTH];
 
 	m_pBodyColorRGBX = new RGBQUAD[CAPTURE_SIZE_X_COLOR * CAPTURE_SIZE_Y_COLOR];
 	m_pBodyDepthRGBX = new RGBQUAD[CAPTURE_SIZE_X_DEPTH * CAPTURE_SIZE_Y_DEPTH];
@@ -50,6 +119,8 @@ Kinect2Manager::Kinect2Manager(){
 	m_nBodyIndex = 0xff;
 	m_bColorDepthMapCalculated = false;
 }
+
+
 
 Kinect2Manager::~Kinect2Manager(){
 	if (m_pDepthRGBX){
@@ -90,6 +161,10 @@ Kinect2Manager::~Kinect2Manager(){
 		delete[] m_pColorYMappedToDepth;
 	}
 
+	if (m_pBodyIndex){
+		delete[] m_pBodyIndex;
+	}
+
 	if (m_pBodyColorRGBX){
 		delete[] m_pBodyColorRGBX;
 	}
@@ -108,6 +183,8 @@ Kinect2Manager::~Kinect2Manager(){
 
 HRESULT Kinect2Manager::InitializeDefaultSensor()
 {
+#ifdef _USE_KINECT
+
 	HRESULT hr;
 
 	hr = GetDefaultKinectSensor(&m_pKinectSensor);
@@ -203,11 +280,17 @@ HRESULT Kinect2Manager::InitializeDefaultSensor()
 	}
 
 	return hr;
+#else
+	LoadBuffers();
+
+	return 0;
+#endif
 }
 
 
 HRESULT Kinect2Manager::InitializeDefaultSensorSeparateReaders()
 {
+#ifdef _USE_KINECT
 	HRESULT hr;
 
 	hr = GetDefaultKinectSensor(&m_pKinectSensor);
@@ -297,9 +380,16 @@ HRESULT Kinect2Manager::InitializeDefaultSensorSeparateReaders()
 	}
 
 	return hr;
+#else
+	LoadBuffers();
+	return 0;
+#endif
 }
 
 void Kinect2Manager::Update(unsigned int options){
+
+#ifdef _USE_KINECT
+
 	IColorFrame * pColorFrame = NULL;
 	IDepthFrame * pDepthFrame = NULL;
 	IBodyFrame * pBodyFrame = NULL;
@@ -449,23 +539,57 @@ void Kinect2Manager::Update(unsigned int options){
 	SafeRelease(pBodyFrame);
 	SafeRelease(pBodyIndexFrame);
 	SafeRelease(pMultiSourceFrame);
+#else
+
+	m_nDepthWidth = CAPTURE_SIZE_X_DEPTH;
+	m_nDepthHeight = CAPTURE_SIZE_Y_DEPTH;
+
+	m_nColorWidth = CAPTURE_SIZE_X_COLOR;
+	m_nColorHeight = CAPTURE_SIZE_Y_COLOR;
+
+	if (options & Update::MapDepthToColor){
+		CalculateColorDepthMap();
+		if (m_bColorDepthMapCalculated)
+			ProcessDepthToColor(m_pDepth, m_nDepthWidth, m_nDepthHeight, m_pColorDepthMap, m_nColorWidth, m_nColorHeight);
+	}
+
+	if (options & Update::MapColorToDepth){
+		CalculateDepthColorMap();
+		if (m_bDepthColorMapCalculated){
+			ProcessColorToDepth(m_pColorRGBX, m_nColorWidth, m_nColorHeight, m_pDepthColorMap, m_nDepthWidth, m_nDepthHeight);
+
+		}
+
+	}
+
+	UpdateBodyIndex(NULL);
+
+#endif
 }
 
 void Kinect2Manager::CalculateColorDepthMap(){
+#ifdef _USE_KINECT
 	HRESULT hr = m_pCoordinateMapper->MapColorFrameToDepthSpace(m_nDepthWidth*m_nDepthHeight, m_pDepth, m_nColorWidth*m_nColorHeight, m_pColorDepthMap);
 	
 	m_bColorDepthMapCalculated = SUCCEEDED(hr);
+#else
+	m_bColorDepthMapCalculated = true;
+#endif
 }
 
 void Kinect2Manager::CalculateDepthColorMap(){
+#ifdef _USE_KINECT
 	HRESULT hr = m_pCoordinateMapper->MapDepthFrameToColorSpace(m_nDepthWidth*m_nDepthHeight, m_pDepth, m_nDepthWidth*m_nDepthHeight, m_pDepthColorMap);
 
 	m_bDepthColorMapCalculated = SUCCEEDED(hr);
+#else
+	m_bDepthColorMapCalculated = true;
+#endif
 }
 
 //after calling this, get the depth fram with GetDepth or GetDepthRGBX
 void Kinect2Manager::UpdateDepth(IDepthFrame* pDepthFrame){
-
+#ifdef _USE_KINECT
 	INT64 nTime = 0;
 	IFrameDescription* pFrameDescription = NULL;
 	int nWidth = 0;
@@ -522,6 +646,8 @@ void Kinect2Manager::UpdateDepth(IDepthFrame* pDepthFrame){
 	}
 
 	SafeRelease(pFrameDescription);
+#else
+#endif
 }
 
 void Kinect2Manager::ProcessDepth(INT64 nTime, const UINT16* pBuffer, int nWidth, int nHeight, USHORT nMinDepth, USHORT nMaxDepth)
@@ -654,6 +780,7 @@ void Kinect2Manager::ProcessColorToDepth(const RGBQUAD * pColorBuffer, int nColo
 
 void Kinect2Manager::UpdateColor(IColorFrame* pColorFrame)
 {
+#ifdef _USE_KINECT
 	INT64 nTime = 0;
 	IFrameDescription* pFrameDescription = NULL;
 	int nWidth = 0;
@@ -715,7 +842,8 @@ void Kinect2Manager::UpdateColor(IColorFrame* pColorFrame)
 	}
 
 	SafeRelease(pFrameDescription);
-
+#else
+#endif
 }
 
 void Kinect2Manager::ProcessColor(INT64 nTime, RGBQUAD* pBuffer, int nWidth, int nHeight)
@@ -746,6 +874,7 @@ void Kinect2Manager::ProcessColor(INT64 nTime, RGBQUAD* pBuffer, int nWidth, int
 
 void Kinect2Manager::UpdateBody(IBodyFrame* pBodyFrame)
 {
+#ifdef _USE_KINECT
 	INT64 nTime = 0;
 
 	HRESULT hr = pBodyFrame->get_RelativeTime(&nTime);
@@ -766,10 +895,12 @@ void Kinect2Manager::UpdateBody(IBodyFrame* pBodyFrame)
 	{
 		SafeRelease(ppBodies[i]);
 	}
-
+#else
+#endif
 }
 
 void Kinect2Manager::ProcessBody(unsigned int nTime, unsigned int nBodyCount, IBody * ppBodies[6]){
+#ifdef _USE_KINECT
 	UCHAR bestBody = 0xff;
 	float bestScore = 0;
 
@@ -842,11 +973,12 @@ void Kinect2Manager::ProcessBody(unsigned int nTime, unsigned int nBodyCount, IB
 		handRightConfidence = TrackingConfidence::TrackingConfidence_Low;
 	}
 	m_nHandRightConfidence = handRightConfidence;
-
+#else
+#endif
 }
 
 void Kinect2Manager::UpdateBodyIndex(IBodyIndexFrame *  pBodyIndexFrame){
-
+#ifdef _USE_KINECT
 	if (m_nDepthWidth == 0 || m_nDepthHeight == 0 || m_nColorWidth == 0 || m_nColorHeight == 0){
 
 		return;
@@ -871,6 +1003,12 @@ void Kinect2Manager::UpdateBodyIndex(IBodyIndexFrame *  pBodyIndexFrame){
 		ProcessBodyFrameIndexColor(pBuffer, m_nDepthWidth, m_nDepthHeight, m_pColorDepthMap, m_nColorWidth, m_nColorHeight);
 		ProcessBodyFrameIndexDepth(pBuffer, m_nDepthWidth, m_nDepthHeight, m_pDepthColorMap, m_nColorWidth, m_nColorHeight);
 	}
+#else
+	ProcessBodyFrameIndexColor(m_pBodyIndex, m_nDepthWidth, m_nDepthHeight, m_pColorDepthMap, m_nColorWidth, m_nColorHeight);
+	ProcessBodyFrameIndexDepth(m_pBodyIndex, m_nDepthWidth, m_nDepthHeight, m_pDepthColorMap, m_nColorWidth, m_nColorHeight);
+
+
+#endif
 }
 
 void Kinect2Manager::ProcessBodyFrameIndexColor(unsigned char * pBodyIndexBuffer, unsigned int nDepthWidth, unsigned int nDepthHeight, const DepthSpacePoint * pColorDepthMap, int nColorWidth, int nColorHeight){
