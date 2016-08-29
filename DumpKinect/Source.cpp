@@ -216,6 +216,16 @@ void save(std::string dir, std::vector<cv::Mat>& rgba_mats,
 }
 
 RGBQUAD * buffer;
+/**
+	args:
+	KinectRead [directory] [startframe]
+
+	controls:
+	r = start/stop recording
+	s = stop recording and save
+	q = save and quit
+	d = dump buffers (what is this?)
+*/
 
 int main(int argc, char ** argv){
 
