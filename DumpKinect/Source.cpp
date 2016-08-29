@@ -58,6 +58,12 @@ void save(std::string dir, std::vector<KinectFrame>& frames,
 			fs.release();
 		}
 
+		if (!frames[i].img_infrared.empty()){
+			filename_ss.str("");
+			filename_ss << dir << "infrared" << offset + i << ".png";
+			cv::imwrite(filename_ss.str(), frames[i].img_infrared);
+		}
+
 
 		if (!frames[i].joints.empty()){
 			filename_ss.str("");
@@ -223,6 +229,7 @@ RGBQUAD * buffer;
 	controls:
 	r = start/stop recording
 	s = stop recording and save
+	n = snapshot
 	q = save and quit
 	d = dump buffers (what is this?)
 */
@@ -259,6 +266,7 @@ int main(int argc, char ** argv){
 	int offset = 0;
 
 	bool b_record = false;
+	bool b_snapshot = false;
 
 	cv::namedWindow("img");
 
@@ -300,7 +308,7 @@ int main(int argc, char ** argv){
 			cv::Mat depth_mat(height, width, cv::DataType<USHORT>::type, depth);
 			cv::Mat infrared_mat(height, width, cv::DataType<USHORT>::type, infrared);
 
-			convert_ushort_to_color(infrared, buffer, width * height);
+			convert_ushort_to_color(infrared, buffer, width * height, USHRT_MAX, 0.08 * 40.0f, 0.15f);
 			cv::Mat infrared_mat_rgb(height, width, CV_8UC4, buffer);
 			cv::imshow("infrared img", infrared_mat_rgb);
 
@@ -326,13 +334,13 @@ int main(int argc, char ** argv){
 				
 			}
 
-			if (different){
+			if (different || b_snapshot){
 
 				try{
-					if (b_record){
+					if (b_record || b_snapshot){
 						KinectFrame frame;
 						frame.img_depth = depth_mat.clone();
-						frame.img_infrared = infrared_mat.clone();
+						frame.img_infrared = infrared_mat_rgb.clone();
 
 						if (color_height > 0 && color_width > 0){
 							cv::Mat rgba_mat(color_height, color_width, CV_8UC4, rgbx);
@@ -407,6 +415,8 @@ int main(int argc, char ** argv){
 				}
 			}
 
+			b_snapshot = false;
+
 			//
 			//filename_ss.str("");
 			//filename_ss << dir << "/rgbx" << counter << ".png";
@@ -437,6 +447,9 @@ int main(int argc, char ** argv){
 		}
 		else if (q == 'd'){
 			kinect_manager.DumpBuffers();
+		}
+		else if (q == 'n'){
+			b_snapshot = true;
 		}
 	}
 

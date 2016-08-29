@@ -4,14 +4,18 @@
 
 //#define _USE_KINECT
 
-void convert_ushort_to_color(USHORT * in, RGBQUAD * out, UINT32 num){
+void convert_ushort_to_color(USHORT * in, RGBQUAD * out, UINT32 num, USHORT max, float ratio, float offset){
 	USHORT * in_end = in + num;
 	USHORT * i = in;
 	RGBQUAD * o = out;
-	UCHAR c;
+	float c;
 	while (i < in_end){
 		USHORT p = *i;
-		c = static_cast<UCHAR>(p % 256);
+		c = static_cast<float>(p) / max;
+		c = ratio * c + offset;
+		c = max(0.f, c);
+		c = min(1.f, c);
+		c = c * 255;
 		o->rgbBlue = c;
 		o->rgbGreen = c;
 		o->rgbRed = c;
@@ -228,7 +232,7 @@ HRESULT Kinect2Manager::InitializeDefaultSensor()
 
 		if (SUCCEEDED(hr)){
 			hr = m_pKinectSensor->OpenMultiSourceFrameReader(
-				FrameSourceTypes::FrameSourceTypes_Depth | FrameSourceTypes::FrameSourceTypes_Color | FrameSourceTypes::FrameSourceTypes_BodyIndex | FrameSourceTypes::FrameSourceTypes_Body,
+				FrameSourceTypes::FrameSourceTypes_Depth | FrameSourceTypes::FrameSourceTypes_Color | FrameSourceTypes::FrameSourceTypes_BodyIndex | FrameSourceTypes::FrameSourceTypes_Body | FrameSourceTypes::FrameSourceTypes_Infrared,
 				&m_pMultiSourceFrameReader);
 		}
 

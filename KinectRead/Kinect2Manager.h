@@ -3,7 +3,7 @@
 #include <Windows.h>
 #include <Kinect.h>
 
-void convert_ushort_to_color(USHORT * in, RGBQUAD * out, UINT32 num);
+void convert_ushort_to_color(USHORT * in, RGBQUAD * out, UINT32 num, USHORT max, float ratio, float offset);
 
 // Safe release for interfaces
 template<class Interface>
