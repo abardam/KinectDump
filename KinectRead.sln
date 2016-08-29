@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.21005.1
+VisualStudioVersion = 12.0.31101.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "KinectRead", "KinectRead\KinectRead.vcxproj", "{C7A671E2-2245-405B-8EBD-E7442B8B70BD}"
 EndProject
@@ -13,6 +13,8 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "KinectCalibrate", "KinectCalibrate\KinectCalibrate.vcxproj", "{C2A6DBF2-66E1-422A-AE78-7D628DDE2957}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DumpKinectASAP", "DumpKinectASAP\DumpKinectASAP.vcxproj", "{5D25AAEC-6EDC-47B4-9EFE-1A46DF9B02AA}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DumpKinectMFC", "DumpKinectMFC\DumpKinectMFC.vcxproj", "{F1230426-1026-4964-BD14-0C17A7590BD7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -36,6 +38,10 @@ Global
 		{5D25AAEC-6EDC-47B4-9EFE-1A46DF9B02AA}.Debug|Win32.Build.0 = Debug|Win32
 		{5D25AAEC-6EDC-47B4-9EFE-1A46DF9B02AA}.Release|Win32.ActiveCfg = Release|Win32
 		{5D25AAEC-6EDC-47B4-9EFE-1A46DF9B02AA}.Release|Win32.Build.0 = Release|Win32
+		{F1230426-1026-4964-BD14-0C17A7590BD7}.Debug|Win32.ActiveCfg = Debug|Win32
+		{F1230426-1026-4964-BD14-0C17A7590BD7}.Debug|Win32.Build.0 = Debug|Win32
+		{F1230426-1026-4964-BD14-0C17A7590BD7}.Release|Win32.ActiveCfg = Release|Win32
+		{F1230426-1026-4964-BD14-0C17A7590BD7}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

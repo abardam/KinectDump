@@ -5,6 +5,7 @@ struct KinectFrame{
 	cv::Mat img_rgba;
 	cv::Mat img_rgba_mapped_to_depth;
 	cv::Mat img_depth;
+	cv::Mat img_infrared;
 	cv::Mat img_rgba_body;
 	cv::Mat img_rgba_mapped_to_depth_body;
 	std::vector<Joint> joints;
@@ -66,8 +67,8 @@ void save(std::string dir, std::vector<KinectFrame>& frames,
 			fs << "frame" << i
 				<< "lefthand" << frames[i].lefthand_confidence
 				<< "righthand" << frames[i].righthand_confidence
-				<< "depth_time" << (int)(frames[i].depth_time)
-				<< "color_time" << (int)(frames[i].color_time)
+				<< "depth_time" << std::to_string(frames[i].depth_time)
+				<< "color_time" << std::to_string(frames[i].color_time)
 				<< "joints" << "[";
 
 			for (int j = 0; j < frames[i].joints.size(); ++j){
@@ -214,7 +215,11 @@ void save(std::string dir, std::vector<cv::Mat>& rgba_mats,
 	color_times.clear();
 }
 
+RGBQUAD * buffer;
+
 int main(int argc, char ** argv){
+
+	buffer = new RGBQUAD[CAPTURE_SIZE_X_DEPTH * CAPTURE_SIZE_Y_DEPTH];
 
 	std::string dir;
 	if (argc >= 2){
@@ -250,7 +255,7 @@ int main(int argc, char ** argv){
 	cv::Mat depth_prev;
 
 	while (true){
-		kinect_manager.Update(Update::Color | Update::Depth | Update::DepthRGBX | Update::Body | Update::BodyIndex | Update::MapColorToDepth);
+		kinect_manager.Update(Update::Color | Update::Depth | Update::DepthRGBX | Update::Body | Update::BodyIndex | Update::MapColorToDepth | Update::Infrared);
 		
 		int width = kinect_manager.getDepthWidth();
 		int height = kinect_manager.getDepthHeight();
@@ -263,6 +268,8 @@ int main(int argc, char ** argv){
 		USHORT* depth = kinect_manager.GetDepth();
 		RGBQUAD* body_rgbx_todepth = kinect_manager.GetBodyDepthRGBX();
 		RGBQUAD * depth_rgbx = kinect_manager.GetDepthRGBX();
+
+		USHORT * infrared = kinect_manager.GetInfrared();
 
 		//kinect_manager.Update(Update::Color | Update::Depth | Update::Body | Update::BodyIndex | Update::MapDepthToColor);
 		//
@@ -281,6 +288,11 @@ int main(int argc, char ** argv){
 			cv::Mat depth_rgba(height, width, CV_8UC4, depth_rgbx);
 			cv::imshow("depth img", depth_rgba);
 			cv::Mat depth_mat(height, width, cv::DataType<USHORT>::type, depth);
+			cv::Mat infrared_mat(height, width, cv::DataType<USHORT>::type, infrared);
+
+			convert_ushort_to_color(infrared, buffer, width * height);
+			cv::Mat infrared_mat_rgb(height, width, CV_8UC4, buffer);
+			cv::imshow("infrared img", infrared_mat_rgb);
 
 			if (depth_prev.empty()){
 				depth_prev.create(depth_mat.size(), depth_mat.type());
@@ -301,16 +313,16 @@ int main(int argc, char ** argv){
 
 				cv::imshow("img", rgba_todepth_mat);
 				cv::imshow("body img", body_rgba_mat);
-
+				
 			}
 
 			if (different){
 
 				try{
 					if (b_record){
-
 						KinectFrame frame;
 						frame.img_depth = depth_mat.clone();
+						frame.img_infrared = infrared_mat.clone();
 
 						if (color_height > 0 && color_width > 0){
 							cv::Mat rgba_mat(color_height, color_width, CV_8UC4, rgbx);
@@ -417,4 +429,6 @@ int main(int argc, char ** argv){
 			kinect_manager.DumpBuffers();
 		}
 	}
+
+	delete buffer;
 }

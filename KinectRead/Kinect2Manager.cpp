@@ -4,6 +4,22 @@
 
 //#define _USE_KINECT
 
+void convert_ushort_to_color(USHORT * in, RGBQUAD * out, UINT32 num){
+	USHORT * in_end = in + num;
+	USHORT * i = in;
+	RGBQUAD * o = out;
+	UCHAR c;
+	while (i < in_end){
+		USHORT p = *i;
+		c = static_cast<UCHAR>(p % 256);
+		o->rgbBlue = c;
+		o->rgbGreen = c;
+		o->rgbRed = c;
+		++i;
+		++o;
+	}
+}
+
 void DumpHR(HRESULT hr)
 {
 	//
@@ -95,6 +111,7 @@ Kinect2Manager::Kinect2Manager(){
 
 	m_pDepthRGBX = new RGBQUAD[CAPTURE_SIZE_X_DEPTH * CAPTURE_SIZE_Y_DEPTH];
 	m_pDepth = new USHORT[CAPTURE_SIZE_X_DEPTH * CAPTURE_SIZE_Y_DEPTH];
+	m_pInfrared = new USHORT[CAPTURE_SIZE_X_DEPTH * CAPTURE_SIZE_Y_DEPTH];
 	m_pColorRGBX = new RGBQUAD[CAPTURE_SIZE_X_COLOR * CAPTURE_SIZE_Y_COLOR];
 	m_pColorDepthMap = new DepthSpacePoint[CAPTURE_SIZE_X_COLOR * CAPTURE_SIZE_Y_COLOR];
 	m_pDepthColorMap = new ColorSpacePoint[CAPTURE_SIZE_X_DEPTH * CAPTURE_SIZE_Y_DEPTH];
@@ -130,6 +147,10 @@ Kinect2Manager::~Kinect2Manager(){
 	if (m_pDepth){
 		delete[] m_pDepth;
 		m_pDepth = NULL;
+	}
+	if (m_pInfrared){
+		delete[] m_pInfrared;
+		m_pInfrared = NULL;
 	}
 	if (m_pColorRGBX){
 		delete[] m_pColorRGBX;
@@ -392,6 +413,7 @@ void Kinect2Manager::Update(unsigned int options){
 
 	IColorFrame * pColorFrame = NULL;
 	IDepthFrame * pDepthFrame = NULL;
+	IInfraredFrame * pInfraredFrame = NULL;
 	IBodyFrame * pBodyFrame = NULL;
 	IBodyIndexFrame * pBodyIndexFrame = NULL;
 	IMultiSourceFrame * pMultiSourceFrame = NULL;
@@ -478,6 +500,21 @@ void Kinect2Manager::Update(unsigned int options){
 			}
 			SafeRelease(pBodyFrameReference);
 		}
+		if (options & Update::Infrared){
+			IInfraredFrameReference * pInfraredFrameReference = NULL;
+			if (numUpdate > 1){
+				hr = pMultiSourceFrame->get_InfraredFrameReference(&pInfraredFrameReference);
+				if (SUCCEEDED(hr)){
+					hr = pInfraredFrameReference->AcquireFrame(&pInfraredFrame);
+				}
+			}
+			else{
+				// TO DO
+				std::cout << "Implement infrared frame reader!\n";
+				exit(0);
+			}
+			SafeRelease(pInfraredFrameReference);
+		}
 
 
 
@@ -533,11 +570,15 @@ void Kinect2Manager::Update(unsigned int options){
 		}
 	}
 
+	if (pInfraredFrame){
+		UpdateInfrared(pInfraredFrame);
+	}
 
 	SafeRelease(pColorFrame); 
 	SafeRelease(pDepthFrame);
 	SafeRelease(pBodyFrame);
 	SafeRelease(pBodyIndexFrame);
+	SafeRelease(pInfraredFrame);
 	SafeRelease(pMultiSourceFrame);
 #else
 
@@ -872,6 +913,82 @@ void Kinect2Manager::ProcessColor(INT64 nTime, RGBQUAD* pBuffer, int nWidth, int
 	}
 }
 
+
+void Kinect2Manager::UpdateInfrared(IInfraredFrame* pInfraredFrame){
+#ifdef _USE_KINECT
+	INT64 nTime = 0;
+	IFrameDescription* pFrameDescription = NULL;
+	int nWidth = 0;
+	int nHeight = 0;
+	USHORT nDepthMinReliableDistance = 0;
+	USHORT nDepthMaxReliableDistance = 0;
+	UINT nBufferSize = 0;
+	UINT16 *pBuffer = NULL;
+
+	HRESULT hr = pInfraredFrame->get_RelativeTime(&nTime);
+
+	if (SUCCEEDED(hr))
+	{
+
+		m_nInfraredTime = nTime;
+		hr = pInfraredFrame->get_FrameDescription(&pFrameDescription);
+	}
+
+	if (SUCCEEDED(hr))
+	{
+		hr = pFrameDescription->get_Width(&nWidth);
+	}
+
+	if (SUCCEEDED(hr))
+	{
+		m_nInfraredWidth = nWidth;
+		hr = pFrameDescription->get_Height(&nHeight);
+	}
+
+	if (SUCCEEDED(hr))
+	{
+		m_nInfraredHeight = nHeight;
+		hr = pInfraredFrame->AccessUnderlyingBuffer(&nBufferSize, &pBuffer);
+	}
+
+	if (SUCCEEDED(hr))
+	{
+		ProcessInfrared(nTime, pBuffer, nWidth, nHeight);
+	}
+
+	SafeRelease(pFrameDescription);
+#else
+#endif
+}
+
+void Kinect2Manager::ProcessInfrared(INT64 nTime, const UINT16* pBuffer, int nWidth, int nHeight)
+{
+	if (!m_nStartTime)
+	{
+		m_nStartTime = nTime;
+	}
+
+	// Make sure we've received valid data
+	if (pBuffer)
+	{
+		USHORT * pInfrared = m_pInfrared;
+
+		// end pixel is start + width*height - 1
+		const UINT16* pBufferEnd = pBuffer + (nWidth * nHeight);
+
+		while (pBuffer < pBufferEnd)
+		{
+			USHORT infrared = *pBuffer;
+			*pInfrared = infrared;
+
+			++pInfrared;
+			++pBuffer;
+		}
+
+	}
+}
+
+
 void Kinect2Manager::UpdateBody(IBodyFrame* pBodyFrame)
 {
 #ifdef _USE_KINECT
@@ -1194,12 +1311,16 @@ int Kinect2Manager::getHandRightConfidence(){
 	return m_nHandRightConfidence;
 }
 
+USHORT * Kinect2Manager::GetInfrared(){
+	return m_pInfrared;
+}
+
 int countUpdate(unsigned int options){
 	int cnt = 0;
 	if (options & Color){
 		++cnt;
 	}
-	if (options & (Depth | Body | BodyIndex | DepthRGBX)){
+	if (options & (Depth | Body | BodyIndex | DepthRGBX | Infrared)){
 		++cnt;
 	}
 	return cnt;

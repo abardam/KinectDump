@@ -3,6 +3,8 @@
 #include <Windows.h>
 #include <Kinect.h>
 
+void convert_ushort_to_color(USHORT * in, RGBQUAD * out, UINT32 num);
+
 // Safe release for interfaces
 template<class Interface>
 inline void SafeRelease(Interface *& pInterfaceToRelease)
@@ -27,6 +29,7 @@ enum Update{
 	DepthRGBX		= 0x10,
 	MapDepthToColor	= 0x20,
 	MapColorToDepth	= 0x40,
+	Infrared		= 0x80,
 };
 
 int countUpdate(unsigned int options);
@@ -58,6 +61,7 @@ public:
 	RGBQUAD * GetBodyDepthRGBX();
 	Joint * GetJoints();
 	JointOrientation * GetJointOrientations();
+	USHORT * GetInfrared();
 
 	unsigned int getDepthWidth();
 	unsigned int getDepthHeight();
@@ -89,6 +93,9 @@ private:
 	//call this, then get the segmented body with GetBodyColorRGBX
 	void UpdateBodyIndex(IBodyIndexFrame *);
 
+	//call this, then get the IR frame with GetIR
+	void UpdateInfrared(IInfraredFrame *);
+
 	void ProcessDepth(INT64 nTime, const UINT16* pBuffer, int nWidth, int nHeight, USHORT nMinDepth, USHORT nMaxDepth);
 
 	void ProcessDepthNoRGBX(INT64 nTime, const UINT16* pBuffer, int nWidth, int nHeight, USHORT nMinDepth, USHORT nMaxDepth);
@@ -98,7 +105,8 @@ private:
 
 
 	void ProcessColor(INT64 nTime, RGBQUAD* pBuffer, int nWidth, int nHeight);
-
+	
+	void ProcessInfrared(INT64 nTime, const UINT16* pBuffer, int nWidth, int nHeight);
 
 	void ProcessBody(unsigned int nTime, unsigned int nBodyCount, IBody * ppBodies[6]);
 
@@ -124,9 +132,11 @@ private:
 	INT64 m_nStartTime;
 	INT64 m_nDepthTime;
 	INT64 m_nColorTime;
+	INT64 m_nInfraredTime;
 
 	RGBQUAD * m_pDepthRGBX;
 	USHORT * m_pDepth;
+	USHORT * m_pInfrared;
 	RGBQUAD * m_pColorRGBX;
 	DepthSpacePoint * m_pColorDepthMap;
 	ColorSpacePoint * m_pDepthColorMap;
@@ -146,6 +156,8 @@ private:
 
 	unsigned int m_nDepthWidth;
 	unsigned int m_nDepthHeight;
+	unsigned int m_nInfraredWidth;
+	unsigned int m_nInfraredHeight;
 	unsigned int m_nColorWidth;
 	unsigned int m_nColorHeight;
 
