@@ -19,6 +19,7 @@ void convert_ushort_to_color(USHORT * in, RGBQUAD * out, UINT32 num, USHORT max,
 		o->rgbBlue = c;
 		o->rgbGreen = c;
 		o->rgbRed = c;
+		o->rgbReserved = 0xff;
 		++i;
 		++o;
 	}
